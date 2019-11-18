@@ -1,0 +1,30 @@
+---
+
+- name: Apache - Ensure config directory exists
+  file:
+    path: '{{ config_dir }}/apache/custom.d'
+    owner: '{{ jadu_user }}'
+    recurse: yes
+    state: directory
+
+- name: Copy config files
+  copy:
+    src: '{{ shared_dir }}/config/apache/custom.d/{{ item }}'
+    dest: '{{ config_dir }}/apache/custom.d/{{ item }}'
+  with_items: '{{ apache_config_items }}'
+  when: vagrant|bool and apache_config_items is defined
+  notify: restart apache
+
+- name: Write out styles config
+  template:
+    src: styles.conf.j2
+    dest: '{{ apache_jadu_config_dir }}/styles.conf'
+  when: vagrant|bool
+  notify: restart apache
+
+- name: Set correct hostname
+  replace:
+    dest: '{{ config_dir }}/apache/vhost.conf'
+    regexp: '^(\s+)ServerAlias(\s+)www\.jadu\.local$'
+    replace: '\1ServerAlias\2{{ hostname }}'
+  notify: restart apache

@@ -1,0 +1,8 @@
+---
+
+- name: Allow mysql access from host
+  mysql_user:
+    name: root
+    host: '%'
+    priv: '*.*:ALL,GRANT'
+    state: present

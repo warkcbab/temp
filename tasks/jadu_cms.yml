@@ -1,0 +1,122 @@
+---
+
+- name: Check site registry
+  command: mysql jadudb -Ns -e "SELECT COUNT(id) FROM JaduSiteRegistry WHERE siteUrl='{{ hostname }}' AND isMainSite='1';"
+  register: site_registry
+
+- name: Update site registry
+  command: mysql jadudb -e "UPDATE JaduSiteRegistry SET siteUrl='{{ hostname }}' where isMainSite='1';"
+  when: site_registry.stdout == '0'
+  notify:
+    - clear data cache
+
+- name: Check legacy routes
+  command: mysql jadudb -Ns -e "SELECT COUNT(id) FROM JaduRoutes WHERE routeName='legacy_document_article_index';"
+  register: legacy_routes
+
+- name: Set legacy routes
+  run_once: true
+  mysql_db:
+    state: import
+    name: jadudb
+    target: '{{ role_path }}/files/legacy_jadu_routes.sql'
+  when: not photon_enabled and legacy_routes.stdout == '0'
+  notify:
+    - clear cache
+    - warmup cache
+
+- name: Check SEASONING_STYLESHEET_DIRECTORY
+  command: mysql jadudb -Ns -e "SELECT value FROM JaduConstants WHERE name='SEASONING_STYLESHEET_DIRECTORY';"
+  register: seasoning_stylesheet_directory
+
+- name: Update SEASONING_STYLESHEET_DIRECTORY
+  command: mysql jadudb -e "UPDATE JaduConstants SET value='{{ stylesheet_dir }}' WHERE name='SEASONING_STYLESHEET_DIRECTORY';"
+  when: seasoning_stylesheet_directory.stdout != stylesheet_dir
+  notify:
+    - clear data cache
+
+- name: Check CMS_LICENSE_KEY
+  command: mysql jadudb -Ns -e "SELECT value FROM JaduConstants WHERE name='CMS_LICENSE_KEY';"
+  when: cms_key is defined
+  register: current_cms_key
+
+- name: Replace CMS_LICENSE_KEY
+  command: mysql jadudb -e "DELETE FROM JaduConstants WHERE name='CMS_LICENSE_KEY'; INSERT INTO JaduConstants (name, value, description, editable, moduleID, type) VALUES ('CMS_LICENSE_KEY', '{{ cms_key }}', 'CMS License Key', 1, 4, 'string');"
+  when: cms_key is defined and current_cms_key.stdout != cms_key
+  notify:
+    - clear data cache
+
+- name: Check GALAXIES_LICENSE_KEY
+  command: mysql jadudb -Ns -e "SELECT value FROM JaduConstants WHERE name='GALAXIES_LICENSE_KEY';"
+  when: cms_key is defined
+  register: current_galaxies_key
+
+- name: Replace GALAXIES_LICENSE_KEY
+  command: mysql jadudb -e "DELETE FROM JaduConstants WHERE name='GALAXIES_LICENSE_KEY'; INSERT INTO JaduConstants (name, value, description, editable, moduleID, type) VALUES ('GALAXIES_LICENSE_KEY', '{{ galaxies_key }}', 'Galaxies License Key', 1, 4, 'string');"
+  when: cms_key is defined and current_cms_key.stdout != cms_key
+  notify:
+    - clear data cache
+
+- name: Register custom module config
+  xml:
+    path: '{{ config_dir }}/modules.xml'
+    xpath: /modules/custom
+    value: '{{ config_dir }}/custom'
+  notify:
+    - clear config cache
+
+- name: Ensure photon is disabled
+  xml:
+    path: '{{ config_dir }}/constants.xml'
+    xpath: /constants/photon_enabled
+    value: '0'
+  when: not photon_enabled
+  notify:
+    - clear config cache
+
+- name: Register websection readable URLs config
+  xml:
+    path: '{{ config_dir }}/readable_urls.xml'
+    xpath: /readable_urls/publishing
+    value: '{{ jadu_home_dir  }}/jadu/websections/htaccess_readable'
+  when: not photon_enabled
+  notify:
+    - clear config cache
+
+- name: Remove photon themes
+  command: mysql jadudb -Ns -e "DELETE FROM jaducms_site_theme;"
+  when: not photon_enabled
+  notify:
+    - clear data cache
+
+- name: Copy bundles config
+  copy:
+    src: '{{ shared_dir }}/config/bundles.xml'
+    dest: '{{ config_dir }}/bundles.xml'
+  when: vagrant|bool and copy_bundles_config
+  notify:
+    - clear config cache
+
+- name: Resume scheduled tasks
+  service:
+    name: crond
+    state: started
+
+- name: Ensure seasoning stylesheet directory exists
+  file:
+      path: '{{ stylesheet_dir }}'
+      state: directory
+      mode: 0755
+      owner: '{{ web_user }}'
+      group: '{{ web_group }}'
+      recurse: yes
+
+- name: Ensure seasoning stylesheet default stylesheet exists
+  file:
+      path: '{{ stylesheet_dir }}/standard.css'
+      state: touch
+      mode: 0755
+      owner: '{{ web_user }}'
+      group: '{{ web_group }}'
+      modification_time: "preserve"
+      access_time: "preserve"

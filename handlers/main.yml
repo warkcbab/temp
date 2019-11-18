@@ -1,0 +1,51 @@
+---
+
+- name: restart apache
+  service:
+    name: httpd
+    state: restarted
+    enabled: yes
+  listen: restart apache
+
+- name: reload apache
+  service:
+    name: httpd
+    state: reloaded
+    enabled: yes
+  listen: reload apache
+
+- name: reload firewall
+  service:
+    name: firewalld
+    state: reloaded
+    enabled: yes
+  listen: reload firewall
+
+- name: clear cache
+  become: yes
+  shell: 'rm -rf {{ jadu_home_dir }}/var/cache/*'
+  args:
+    warn: false
+  listen: clear cache
+
+- name: clear data cache
+  become: yes
+  shell: 'rm -rf {{ jadu_home_dir }}/var/cache/*jadu*'
+  args:
+    warn: false
+  listen: clear data cache
+
+- name: clear config cache
+  become: yes
+  shell: 'rm -rf {{ jadu_home_dir }}/var/cache/config*'
+  args:
+    warn: false
+  listen: clear config cache
+
+- name: warmup cache
+  become_user: '{{ web_user }}'
+  command: '/bin/bash -c "php {{ jadu_home_dir }}/cli.php cache:warmup  --kernel={{ item }}"'
+  with_items:
+      - cc
+      - frontend
+  listen: warmup cache

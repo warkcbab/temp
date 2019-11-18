@@ -1,0 +1,17 @@
+---
+
+- name: Write out DEV php-wrapper
+  template:
+    src: php-wrapper.j2
+    dest: '{{ jadu_home_dir }}/bin/php-wrapper'
+    owner: '{{ web_user }}'
+  when: vagrant|bool
+  notify: restart apache
+
+
+- name: Write out DEV php ini
+  template:
+    src: 60-jadudev.ini
+    dest: /etc/php.d/60-jadudev.ini
+  when: vagrant|bool
+  notify: restart apache

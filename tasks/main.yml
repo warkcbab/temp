@@ -1,0 +1,15 @@
+---
+
+- import_tasks: apache.yml
+
+- import_tasks: php.yml
+
+- import_tasks: firewall.yml
+
+- import_tasks: mysql.yml
+
+- import_tasks: meteor.yml
+
+- import_tasks: jadu_cms.yml
+
+- import_tasks: jadu_xfp.yml

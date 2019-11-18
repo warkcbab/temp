@@ -1,0 +1,41 @@
+---
+
+- name: Check XFP
+  command: mysql jadudb -Ns -e "SELECT COUNT(id) FROM JaduModules WHERE module_url IN ('/xforms2/index.php', '/PayBridge/index.php');"
+  register: xfp_module
+
+- name: Remove XFP tables
+  run_once: true
+  mysql_db:
+    state: import
+    name: jadudb
+    target: '{{ role_path }}/files/remove_xfp.sql'
+  when: not xfp_enabled and xfp_module.stdout != '0'
+  notify:
+    - clear data cache
+
+- name: Remove XFP configs
+  file:
+    path: '{{ item }}'
+    state: absent
+  with_items:
+      - '{{ jadu_home_dir }}/var/config/cc/xfp'
+      - '{{ jadu_home_dir }}/var/config/xfp'
+      - '{{ jadu_home_dir }}/var/config/frontend/xfp'
+      - '{{ config_dir }}/xfp'
+  when: not xfp_enabled
+  notify:
+    - clear cache
+
+# Template v10 has incorrect permissions on config/xfp so we need to reset them
+- name: Set XFP config permissions
+  file:
+      path: '{{ config_dir }}/xfp'
+      state: directory
+      mode: 0654
+      owner: '{{ jadu_user }}'
+      group: '{{ web_group }}'
+      recurse: yes
+  when: xfp_enabled
+  notify:
+    - clear config cache

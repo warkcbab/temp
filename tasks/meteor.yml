@@ -1,0 +1,7 @@
+---
+
+- name: Fetch meteor.phar
+  run_once: true
+  get_url:
+    dest: '{{ shared_dir }}/meteor.phar'
+    url: 'https://github.com/jadu/meteor/releases/download/3.3.0/meteor.phar'

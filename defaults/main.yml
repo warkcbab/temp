@@ -1,0 +1,23 @@
+---
+
+jadu_home_dir: /var/www/jadu
+config_dir: '{{ jadu_home_dir }}/config'
+
+apache_config_items: ~
+
+# trailing slash is required here for CMS
+stylesheet_dir: '{{ jadu_home_dir }}/var/data/{{ hostname }}/styles/'
+apache_jadu_config_dir: '{{ jadu_home_dir }}/config/apache/jadu.d'
+jadu_user: jadu
+jadu_group: jadu
+web_user: jadu-www
+web_group: jadu-www
+vagrant: yes
+shared_dir: /vagrant
+photon_enabled: yes
+xfp_enabled: yes
+copy_bundles_config: yes
+
+# dev or prod
+symfony_env: dev
+

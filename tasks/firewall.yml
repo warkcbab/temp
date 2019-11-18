@@ -1,0 +1,25 @@
+---
+
+- name: Firewall - allow http
+  firewalld:
+    service: http
+    zone: public
+    permanent: yes
+    state: enabled
+  notify: reload firewall
+
+- name: Firewall - allow https
+  firewalld:
+    service: https
+    zone: public
+    permanent: yes
+    state: enabled
+  notify: reload firewall
+
+- name: Firewall - allow MySQL
+  firewalld:
+    service: mysql
+    zone: public
+    permanent: yes
+    state: enabled
+  notify: reload firewall
